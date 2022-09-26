@@ -1,6 +1,8 @@
 <?php
 
+use App\Imports\InvoiceImport;
 use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,3 +32,6 @@ Route::middleware([
 Route::get('/invoice/export', [\App\Http\Controllers\InvoiceController::class, 'export'])->name('invoices.export');
 Route::get('/invoice/import', [\App\Http\Controllers\InvoiceController::class, 'import'])->name('invoices.import');
 Route::post('/invoice/import', [\App\Http\Controllers\InvoiceController::class, 'importStore'])->name('invoices.importStore');
+Route::get('prueba', function (){
+    return Excel::toCollection(new InvoiceImport, 'csv/invoices.csv');
+});

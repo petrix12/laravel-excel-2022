@@ -918,50 +918,198 @@
     + **Nota**: para programar la importación, editar **app\Imports\InvoiceImport.php**.
 2. Programar el import **InvoiceImport** (app\Imports\InvoiceImport.php):
     ```php
-    ≡
-    ≡
+    <?php
+
+    namespace App\Imports;
+
+    use App\Models\Invoice;
+    use Maatwebsite\Excel\Concerns\ToModel;
+
+    class InvoiceImport implements ToModel
+    {
+        /**
+        * @param array $row
+        *
+        * @return \Illuminate\Database\Eloquent\Model|null
+        */
+        public function model(array $row)
+        {
+            return new Invoice([
+                'serie' => $row[0],
+                'base' => $row[1],
+                'igv' => $row[2],
+                'total' => $row[3],
+                'user_id' => 1
+            ]);
+        }
+    }
     ```
 3. Modificar el controlador **InvoiceController** (app\Http\Controllers\InvoiceController.php):
     ```php
     ≡
-    ```
-4. mmmm
-
-
-
-
-    ```php
+    <?php
     ≡
-    ≡
+    use App\Imports\InvoiceImport;
+    use Illuminate\Http\Request;
+    use Maatwebsite\Excel\Facades\Excel;
+
+    class InvoiceController extends Controller
+    {
+        ≡
+        public function importStore(Request $request){
+            $request->validate([
+                'file' => 'required|mimes:csv,xlsx'
+            ]);
+
+            $file = $request->file('file');
+
+            // Obtenemos la importación en un objeto JSON.
+            // $ImportJson = Excel::toCollection(new InvoiceImport, $file);
+
+            Excel::import(new InvoiceImport, $file);
+            return "Se importó el archivo";
+        }
+    }
     ```
 
 ### 25. Importar fechas
+1. Modificar el import **InvoiceImport** (app\Imports\InvoiceImport.php):
+    ```php
+    <?php
 
+    namespace App\Imports;
 
+    use App\Models\Invoice;
+    use Carbon\Carbon;
+    use Maatwebsite\Excel\Concerns\ToModel;
+    use PhpOffice\PhpSpreadsheet\Shared\Date;
 
-
+    class InvoiceImport implements ToModel
+    {
+        /**
+        * @param array $row
+        *
+        * @return \Illuminate\Database\Eloquent\Model|null
+        */
+        public function model(array $row)
+        {
+            return new Invoice([
+                'serie' => $row[0],
+                'base' => $row[1],
+                'igv' => $row[2],
+                'total' => $row[3],
+                'user_id' => 1,
+                'created_at' => Carbon::instance(Date::excelToDateTimeObject($row[4]))
+                //'created_at' => Carbon::createFromFormat('d/m/Y', $row[4])
+            ]);
+        }
+    }
+    ```
+2. Modificar el modelo **Invoice** (app\Models\Invoice.php):
     ```php
     ≡
+    protected $fillable = [
+        'serie',
+        'correlative',
+        'base',
+        'igv',
+        'total',
+        'user_id',
+        'created_at'
+    ];
     ≡
     ```
 
 ### 26. Colecciones
-
-
-
-
+1. Modificar el import **InvoiceImport** (app\Imports\InvoiceImport.php):
     ```php
-    ≡
-    ≡
+    <?php
+
+    namespace App\Imports;
+
+    use App\Models\Invoice;
+    use Carbon\Carbon;
+    use Maatwebsite\Excel\Concerns\ToCollection;
+    //use Maatwebsite\Excel\Concerns\ToModel;
+    use PhpOffice\PhpSpreadsheet\Shared\Date;
+
+    class InvoiceImport implements /* ToModel */ ToCollection
+    {
+        public function collection($rows)
+        {
+            foreach($rows as $row){
+                $invoice = Invoice::create([
+                    'serie' => $row[0],
+                    'base' => $row[1],
+                    'igv' => $row[2],
+                    'total' => $row[3],
+                    'user_id' => 1,
+                    'created_at' => Carbon::instance(Date::excelToDateTimeObject($row[4]))
+                    //'created_at' => Carbon::createFromFormat('d/m/Y', $row[4])
+                ]);
+
+                /* Compras::create([
+                    'invoice_id' => $invoice->id;
+                ]); */
+            }
+        }
+    }
     ```
 
 ### 27. Importar CSV
-
-
-
-
-    ```php
+1. Modificar archivo de variables de entorno **.env**:
+    ```env
     ≡
+    FILESYSTEM_DISK=public
     ≡
     ```
+2. Modificar archivo de rutas **web** (routes\web.php):
+    ```php
+    ≡
+    use App\Imports\InvoiceImport;
+    use Illuminate\Support\Facades\Route;
+    use Maatwebsite\Excel\Facades\Excel;
+    ≡
+    Route::get('prueba', function (){
+        return Excel::toCollection(new InvoiceImport, 'csv/invoices.csv');
+    });
+    ```
+3. Modificar el import **InvoiceImport** (app\Imports\InvoiceImport.php):
+    ```php
+    <?php
 
+    namespace App\Imports;
+
+    use App\Models\Invoice;
+    use Carbon\Carbon;
+    use Maatwebsite\Excel\Concerns\ToCollection;
+    //use Maatwebsite\Excel\Concerns\ToModel;
+    use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
+    use Maatwebsite\Excel\Concerns\WithGroupedHeadingRow;
+    use PhpOffice\PhpSpreadsheet\Shared\Date;
+
+    class InvoiceImport implements /* ToModel */ ToCollection, WithGroupedHeadingRow, WithCustomCsvSettings
+    {
+        public function collection($rows)
+        {
+            foreach($rows as $row){
+                Invoice::create([
+                    'serie' => $row[0],
+                    'base' => $row[1],
+                    'igv' => $row[2],
+                    'total' => $row[3],
+                    'user_id' => 1
+                ]);
+            }
+        }
+
+        // Definir delimitador y juego de caracteres de los archivos csv
+        public function getCsvSettings(): array
+        {
+            return [
+                'input_encoding' => 'UTF-8',
+                'delimiter' => ';'
+            ];
+        }
+    }
+    ```

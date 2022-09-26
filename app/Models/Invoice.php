@@ -15,7 +15,8 @@ class Invoice extends Model
         'base',
         'igv',
         'total',
-        'user_id'
+        'user_id',
+        'created_at'
     ];
 
     // Query Scopes

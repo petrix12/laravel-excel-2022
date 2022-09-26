@@ -24,7 +24,7 @@ class InvoiceController extends Controller
         $file = $request->file('file');
 
         // Obtenemos la importación en un objeto JSON.
-        // $ImportJson = Excel::toCollection(new InvoiceImport, $file);
+        // return Excel::toCollection(new InvoiceImport, $file);
 
         Excel::import(new InvoiceImport, $file);
         return "Se importó el archivo";
